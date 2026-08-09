@@ -15,23 +15,19 @@ export async function transcribeAudio(videoBuffer: Buffer, fileName: string): Pr
   const mime = mimeMap[ext] || "audio/mp4";
 
   const blob = new Blob([new Uint8Array(videoBuffer)], { type: mime });
-  const safeName = `audio.${ext}`;
-  const file = new File([blob], safeName, { type: mime });
+  const file = new File([blob], `audio.${ext}`, { type: mime });
 
   const formData = new FormData();
   formData.append("file", file);
   formData.append("model", "whisper-large-v3");
   formData.append("response_format", "verbose_json");
-  formData.append("timestamp_granularities[]", "segment");
   formData.append("language", "ur");
 
   console.log("[Whisper] Calling Groq API...");
 
   const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
     method: "POST",
-    headers: {
-      "Authorization": `Bearer ${GROQ_API_KEY}`,
-    },
+    headers: { "Authorization": `Bearer ${GROQ_API_KEY}` },
     body: formData,
   });
 
@@ -44,19 +40,32 @@ export async function transcribeAudio(videoBuffer: Buffer, fileName: string): Pr
   }
 
   const data = await res.json();
+  const duration = data.duration || 10;
+  const fullText = data.text?.trim() || "";
 
-  if (data.segments) {
-    return data.segments.map((seg: { id: number; start: number; end: number; text: string }) => ({
-      id: String(seg.id),
-      start: seg.start,
-      end: seg.end,
-      text: seg.text.trim(),
-    }));
+  console.log("[Whisper] Duration:", duration, "Text length:", fullText.length);
+
+  // Split into phrases (2-4 words each) for word-by-word appearance
+  const words = fullText.split(/\s+/).filter(Boolean);
+  const phraseSize = 3; // 3 words per caption
+  const chunks: CaptionSegment[] = [];
+
+  // Calculate time per word based on total duration
+  const timePerWord = duration / Math.max(words.length, 1);
+
+  for (let i = 0; i < words.length; i += phraseSize) {
+    const phraseWords = words.slice(i, i + phraseSize);
+    const start = i * timePerWord;
+    const end = Math.min((i + phraseSize) * timePerWord, duration);
+
+    chunks.push({
+      id: String(chunks.length + 1),
+      start,
+      end,
+      text: phraseWords.join(" "),
+    });
   }
 
-  if (data.text) {
-    return [{ id: "1", start: 0, end: 10, text: data.text.trim() }];
-  }
-
-  throw new Error("Unexpected response format");
+  console.log("[Whisper] Created", chunks.length, "caption chunks");
+  return chunks;
 }
