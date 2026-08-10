@@ -5,7 +5,24 @@ export type CaptionStylePreset =
   | "bold"
   | "cinematic"
   | "minimal"
-  | "social";
+  | "social"
+  | "tiktok"
+  | "youtube"
+  | "neon"
+  | "glitch"
+  | "karaoke";
+
+export type CaptionAnimation =
+  | "none"
+  | "fade"
+  | "slide-up"
+  | "slide-down"
+  | "pop"
+  | "typewriter"
+  | "bounce"
+  | "glow-pulse"
+  | "zoom-in"
+  | "shake";
 
 export interface CaptionSegment {
   id: string;
@@ -22,6 +39,7 @@ export interface CaptionStyleConfig {
   color: string;
   backgroundColor: string;
   position: "top" | "center" | "bottom";
+  animation: CaptionAnimation;
 }
 
 export type ProjectStatus =

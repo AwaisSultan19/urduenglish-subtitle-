@@ -21,6 +21,7 @@ const defaultStyle: CaptionStyleConfig = {
   color: "#ffffff",
   backgroundColor: "rgba(0,0,0,0.7)",
   position: "bottom",
+  animation: "fade",
 };
 
 export default function Home() {
@@ -113,6 +114,35 @@ export default function Home() {
     }
   }, [videoUrl, fileName, handleTranslate]);
 
+  const handleExportVideo = useCallback(async () => {
+    if (segments.length === 0) return;
+    setIsExporting(true);
+    setError("");
+    setProgress("Generating video with burned-in captions... This may take a while.");
+    try {
+      const res = await fetch("/api/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ segments, videoUrl, style }),
+      });
+
+      if (!res.ok) throw new Error("Export failed");
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "video_with_captions.mp4";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setIsExporting(false);
+      setProgress("");
+    }
+  }, [segments, videoUrl, style]);
+
   const handleExportSrt = useCallback(async () => {
     if (segments.length === 0) return;
     setIsExporting(true);
@@ -121,7 +151,7 @@ export default function Home() {
       const res = await fetch("/api/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ segments }),
+        body: JSON.stringify({ segments, format: "srt" }),
       });
 
       if (!res.ok) throw new Error("Export failed");
@@ -225,12 +255,12 @@ export default function Home() {
               videoUrl={videoUrl}
               segments={segments}
               style={style}
-              currentTime={0}
             />
 
             {status === "ready" && (
               <DownloadButton
-                onDownload={handleExportSrt}
+                onDownloadVideo={handleExportVideo}
+                onDownloadSrt={handleExportSrt}
                 isExporting={isExporting}
               />
             )}

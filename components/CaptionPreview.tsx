@@ -1,6 +1,6 @@
 "use client";
 
-import { CaptionSegment } from "@/types";
+import { CaptionSegment, CaptionAnimation } from "@/types";
 import { useRef, useEffect, useState, useCallback } from "react";
 
 interface CaptionPreviewProps {
@@ -11,8 +11,22 @@ interface CaptionPreviewProps {
     color: string;
     backgroundColor: string;
     position: "top" | "center" | "bottom";
+    animation: CaptionAnimation;
   };
 }
+
+const animClassMap: Record<CaptionAnimation, string> = {
+  none: "caption-anim-none",
+  fade: "caption-anim-fade",
+  "slide-up": "caption-anim-slide-up",
+  "slide-down": "caption-anim-slide-down",
+  pop: "caption-anim-pop",
+  typewriter: "caption-anim-typewriter",
+  bounce: "caption-anim-bounce",
+  "glow-pulse": "caption-anim-glow-pulse",
+  "zoom-in": "caption-anim-zoom-in",
+  shake: "caption-anim-shake",
+};
 
 export default function CaptionPreview({
   videoUrl,
@@ -21,6 +35,7 @@ export default function CaptionPreview({
 }: CaptionPreviewProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [activeIdx, setActiveIdx] = useState(-1);
+  const [animKey, setAnimKey] = useState(0);
 
   const findActiveSegment = useCallback(
     (time: number) => {
@@ -42,7 +57,12 @@ export default function CaptionPreview({
 
     const tick = () => {
       const idx = findActiveSegment(video.currentTime);
-      setActiveIdx(idx);
+      setActiveIdx((prev) => {
+        if (prev !== idx && idx >= 0) {
+          setAnimKey((k) => k + 1);
+        }
+        return idx;
+      });
       rafId = requestAnimationFrame(tick);
     };
 
@@ -59,6 +79,7 @@ export default function CaptionPreview({
         : "bottom-4";
 
   const activeSegment = activeIdx >= 0 ? segments[activeIdx] : null;
+  const animClass = animClassMap[style.animation] || "caption-anim-none";
 
   return (
     <div className="w-full">
@@ -80,7 +101,8 @@ export default function CaptionPreview({
                 className={`absolute left-0 right-0 ${positionClass} flex justify-center px-4`}
               >
                 <span
-                  className="px-3 py-1.5 rounded-lg text-center max-w-[90%] leading-tight"
+                  key={`${activeIdx}-${animKey}`}
+                  className={`px-3 py-1.5 rounded-lg text-center max-w-[90%] leading-tight ${animClass}`}
                   style={{
                     fontSize: `${style.fontSize}px`,
                     color: style.color,

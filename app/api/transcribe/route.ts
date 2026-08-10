@@ -18,7 +18,9 @@ export async function POST(request: NextRequest) {
     console.log("[Transcribe] Downloading video from:", videoUrl);
 
     // Download video from Supabase
-    const videoResponse = await fetch(videoUrl);
+    const videoResponse = await fetch(videoUrl, {
+      signal: AbortSignal.timeout(120000),
+    });
     if (!videoResponse.ok) {
       throw new Error(`Failed to download video: ${videoResponse.status} ${videoResponse.statusText}`);
     }
