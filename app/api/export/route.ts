@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateSrt, burnSubtitlesIntoVideo } from "@/lib/ffmpeg";
+import { generateSrt, generateVtt, burnSubtitlesIntoVideo } from "@/lib/ffmpeg";
 import { CaptionStyleConfig } from "@/types";
 
 export const maxDuration = 300;
@@ -25,7 +25,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (format === "srt" || !videoUrl) {
+    if (format === "srt") {
+      const srtContent = await generateSrt(segments, true);
+      return new NextResponse(srtContent, {
+        headers: {
+          "Content-Type": "text/srt",
+          "Content-Disposition": 'attachment; filename="captions.srt"',
+        },
+      });
+    }
+
+    if (format === "vtt") {
+      const vttContent = await generateVtt(segments, true);
+      return new NextResponse(vttContent, {
+        headers: {
+          "Content-Type": "text/vtt",
+          "Content-Disposition": 'attachment; filename="captions.vtt"',
+        },
+      });
+    }
+
+    if (!videoUrl) {
       const srtContent = await generateSrt(segments, true);
       return new NextResponse(srtContent, {
         headers: {

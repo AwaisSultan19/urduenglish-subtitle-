@@ -1,5 +1,7 @@
 export type TargetLanguage = "english" | "roman-urdu" | "urdu";
 
+export type SourceLanguage = "urdu" | "hinglish" | "auto";
+
 export type CaptionStylePreset =
   | "default"
   | "bold"
@@ -10,7 +12,8 @@ export type CaptionStylePreset =
   | "youtube"
   | "neon"
   | "glitch"
-  | "karaoke";
+  | "karaoke"
+  | "reels";
 
 export type CaptionAnimation =
   | "none"
@@ -24,12 +27,19 @@ export type CaptionAnimation =
   | "zoom-in"
   | "shake";
 
+export interface WordTiming {
+  word: string;
+  start: number;
+  end: number;
+}
+
 export interface CaptionSegment {
   id: string;
   start: number;
   end: number;
   text: string;
   translatedText?: string;
+  words?: WordTiming[];
 }
 
 export interface CaptionStyleConfig {

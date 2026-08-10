@@ -9,6 +9,7 @@ import DownloadButton from "@/components/DownloadButton";
 import { uploadVideoDirect } from "@/lib/upload";
 import {
   TargetLanguage,
+  SourceLanguage,
   CaptionSegment,
   CaptionStyleConfig,
   ProjectStatus,
@@ -27,6 +28,7 @@ const defaultStyle: CaptionStyleConfig = {
 export default function Home() {
   const [videoUrl, setVideoUrl] = useState("");
   const [language, setLanguage] = useState<TargetLanguage>("english");
+  const [sourceLanguage, setSourceLanguage] = useState<SourceLanguage>("urdu");
   const [style, setStyle] = useState<CaptionStyleConfig>(defaultStyle);
   const [segments, setSegments] = useState<CaptionSegment[]>([]);
   const [status, setStatus] = useState<ProjectStatus>("idle");
@@ -35,6 +37,7 @@ export default function Home() {
   const [progress, setProgress] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [fileName, setFileName] = useState("");
+  const [highlightWords, setHighlightWords] = useState(false);
 
   const handleUpload = useCallback(async (file: File) => {
     setStatus("uploading");
@@ -91,7 +94,7 @@ export default function Home() {
       const res = await fetch("/api/transcribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoUrl, fileName }),
+        body: JSON.stringify({ videoUrl, fileName, sourceLanguage }),
       });
 
       let data;
@@ -112,7 +115,7 @@ export default function Home() {
       setStatus("error");
       setProgress("");
     }
-  }, [videoUrl, fileName, handleTranslate]);
+  }, [videoUrl, fileName, sourceLanguage, handleTranslate]);
 
   const handleExportVideo = useCallback(async () => {
     if (segments.length === 0) return;
@@ -170,6 +173,33 @@ export default function Home() {
     }
   }, [segments]);
 
+  const handleExportVtt = useCallback(async () => {
+    if (segments.length === 0) return;
+    setIsExporting(true);
+    setError("");
+    try {
+      const res = await fetch("/api/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ segments, format: "vtt" }),
+      });
+
+      if (!res.ok) throw new Error("Export failed");
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "captions.vtt";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [segments]);
+
   const isProcessing = status === "uploading" || status === "transcribing" || status === "translating";
 
   return (
@@ -203,10 +233,27 @@ export default function Home() {
             <LanguageSelector
               value={language}
               onChange={setLanguage}
+              sourceLanguage={sourceLanguage}
+              onSourceLanguageChange={setSourceLanguage}
               disabled={isProcessing || isExporting}
             />
 
             <CaptionStyle value={style} onChange={setStyle} disabled={isProcessing || isExporting} />
+
+            {segments.length > 0 && (
+              <div className="flex items-center gap-2">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={highlightWords}
+                    onChange={(e) => setHighlightWords(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-violet-600"></div>
+                </label>
+                <span className="text-xs text-zinc-400">Word Highlight (Karaoke)</span>
+              </div>
+            )}
 
             {videoUrl && segments.length === 0 && (
               <button
@@ -255,12 +302,15 @@ export default function Home() {
               videoUrl={videoUrl}
               segments={segments}
               style={style}
+              highlightWords={highlightWords}
+              onUpdateSegments={setSegments}
             />
 
             {status === "ready" && (
               <DownloadButton
                 onDownloadVideo={handleExportVideo}
                 onDownloadSrt={handleExportSrt}
+                onDownloadVtt={handleExportVtt}
                 isExporting={isExporting}
               />
             )}

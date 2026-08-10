@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { transcribeAudio } from "@/lib/whisper";
+import { SourceLanguage } from "@/types";
 
 export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { videoUrl, fileName } = body;
+    const { videoUrl, fileName, sourceLanguage } = body;
 
     if (!videoUrl) {
       return NextResponse.json(
@@ -17,7 +18,6 @@ export async function POST(request: NextRequest) {
 
     console.log("[Transcribe] Downloading video from:", videoUrl);
 
-    // Download video from Supabase
     const videoResponse = await fetch(videoUrl, {
       signal: AbortSignal.timeout(120000),
     });
@@ -29,7 +29,6 @@ export async function POST(request: NextRequest) {
 
     console.log("[Transcribe] File size:", sizeMB, "MB");
 
-    // Check 25MB limit for Whisper API
     if (videoBuffer.length > 25 * 1024 * 1024) {
       return NextResponse.json(
         { success: false, error: `Video is ${sizeMB}MB. Whisper API limit is 25MB. Please use a shorter video.` },
@@ -37,7 +36,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const segments = await transcribeAudio(videoBuffer, fileName || "video.mp4");
+    const lang = (sourceLanguage as SourceLanguage) || "urdu";
+    const segments = await transcribeAudio(videoBuffer, fileName || "video.mp4", lang);
 
     console.log("[Transcribe] Got", segments.length, "segments");
 
