@@ -1,31 +1,10 @@
-export type TargetLanguage = "english" | "roman-urdu" | "urdu";
+export type TargetLanguage = "english" | "roman-urdu";
 
-export type SourceLanguage = "urdu" | "hinglish" | "auto";
+export type SourceLanguage = "urdu" | "hinglish" | "english" | "auto";
 
-export type CaptionStylePreset =
-  | "default"
-  | "bold"
-  | "cinematic"
-  | "minimal"
-  | "social"
-  | "tiktok"
-  | "youtube"
-  | "neon"
-  | "glitch"
-  | "karaoke"
-  | "reels";
+export type SubtitlePreset = "clean" | "bold" | "highlight" | "box" | "minimal";
 
-export type CaptionAnimation =
-  | "none"
-  | "fade"
-  | "slide-up"
-  | "slide-down"
-  | "pop"
-  | "typewriter"
-  | "bounce"
-  | "glow-pulse"
-  | "zoom-in"
-  | "shake";
+export type SubtitleAnimation = "none" | "fade";
 
 export interface WordTiming {
   word: string;
@@ -42,14 +21,30 @@ export interface CaptionSegment {
   words?: WordTiming[];
 }
 
-export interface CaptionStyleConfig {
-  preset: CaptionStylePreset;
-  fontSize: number;
+export interface SubtitleStyle {
+  preset: SubtitlePreset;
   fontFamily: string;
+  fontSize: number;
+  fontWeight: number;
   color: string;
   backgroundColor: string;
+  backgroundOpacity: number;
+  outlineColor: string;
+  outlineWidth: number;
+  shadowColor: string;
+  shadowBlur: number;
   position: "top" | "center" | "bottom";
-  animation: CaptionAnimation;
+  alignment: "left" | "center" | "right";
+  maxWidth: number;
+  lineHeight: number;
+  letterSpacing: number;
+  activeWordColor: string;
+  animation: SubtitleAnimation;
+  marginTop: number;
+  marginBottom: number;
+  paddingX: number;
+  paddingY: number;
+  borderRadius: number;
 }
 
 export type ProjectStatus =

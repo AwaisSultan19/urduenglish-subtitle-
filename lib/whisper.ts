@@ -4,7 +4,8 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 const SOURCE_LANG_MAP: Record<SourceLanguage, string> = {
   urdu: "ur",
-  hinglish: "hi",
+  hinglish: "ur",
+  english: "en",
   auto: "",
 };
 

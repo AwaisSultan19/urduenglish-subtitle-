@@ -1,18 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateSrt, generateVtt, burnSubtitlesIntoVideo } from "@/lib/ffmpeg";
-import { CaptionStyleConfig } from "@/types";
+import { SubtitleStyle } from "@/types";
+import { SUBTITLE_PRESETS } from "@/lib/subtitle-style";
 
 export const maxDuration = 300;
-
-const defaultStyle: CaptionStyleConfig = {
-  preset: "default",
-  fontSize: 18,
-  fontFamily: "Inter",
-  color: "#ffffff",
-  backgroundColor: "rgba(0,0,0,0.7)",
-  position: "bottom",
-  animation: "fade",
-};
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,7 +46,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const captionStyle = style || defaultStyle;
+    const captionStyle: SubtitleStyle = style || SUBTITLE_PRESETS.clean;
     const videoBuffer = await burnSubtitlesIntoVideo(videoUrl, segments, captionStyle);
 
     return new NextResponse(new Uint8Array(videoBuffer), {

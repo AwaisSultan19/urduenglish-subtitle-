@@ -13,12 +13,12 @@ interface LanguageSelectorProps {
 const targetLanguages: { value: TargetLanguage; label: string; flag: string }[] = [
   { value: "english", label: "English", flag: "EN" },
   { value: "roman-urdu", label: "Roman Urdu", flag: "RU" },
-  { value: "urdu", label: "Urdu", flag: "UR" },
 ];
 
 const sourceLanguages: { value: SourceLanguage; label: string }[] = [
   { value: "urdu", label: "Urdu" },
   { value: "hinglish", label: "Hinglish" },
+  { value: "english", label: "English" },
   { value: "auto", label: "Auto Detect" },
 ];
 
@@ -35,7 +35,7 @@ export default function LanguageSelector({
         <label className="block text-sm font-medium text-zinc-300 mb-2">
           Audio Language
         </label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {sourceLanguages.map((lang) => (
             <button
               key={lang.value}
@@ -57,7 +57,7 @@ export default function LanguageSelector({
         <label className="block text-sm font-medium text-zinc-300 mb-2">
           Translate To
         </label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {targetLanguages.map((lang) => (
             <button
               key={lang.value}

@@ -1,4 +1,5 @@
-import { CaptionSegment, CaptionStyleConfig } from "@/types";
+import { CaptionSegment, SubtitleStyle } from "@/types";
+import { subtitleStyleToAss } from "@/lib/subtitle-style";
 import { spawn } from "child_process";
 import { writeFile, readFile, unlink } from "fs/promises";
 import { join } from "path";
@@ -85,40 +86,6 @@ function pad(n: number): string {
   return n.toString().padStart(2, "0");
 }
 
-function buildForceStyle(style: CaptionStyleConfig): string {
-  const r = parseInt(style.color.slice(1, 3), 16);
-  const g = parseInt(style.color.slice(3, 5), 16);
-  const b = parseInt(style.color.slice(5, 7), 16);
-  const assColor = `&H00${b.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${r.toString(16).padStart(2, "0")}`.toUpperCase();
-
-  let bgR = 0, bgG = 0, bgB = 0, bgAlpha = 128;
-  const bgMatch = style.backgroundColor.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
-  if (bgMatch) {
-    bgR = parseInt(bgMatch[1]);
-    bgG = parseInt(bgMatch[2]);
-    bgB = parseInt(bgMatch[3]);
-    bgAlpha = Math.round((1 - parseFloat(bgMatch[4])) * 255);
-  } else if (style.backgroundColor === "transparent") {
-    bgAlpha = 255;
-  }
-  const backColour = `&H${bgAlpha.toString(16).padStart(2, "0")}${bgB.toString(16).padStart(2, "0")}${bgG.toString(16).padStart(2, "0")}${bgR.toString(16).padStart(2, "0")}`.toUpperCase();
-
-  const fontSize = Math.round(style.fontSize * 1.3);
-  const fontName = "Arial";
-
-  const posMap: Record<string, string> = {
-    top: "6",
-    center: "5",
-    bottom: "2",
-  };
-  const alignment = posMap[style.position] || "2";
-
-  const hasBg = style.backgroundColor !== "transparent" && bgAlpha < 255;
-  const backStr = hasBg ? `,BackColour=${backColour},BorderStyle=3,OutlineColour=&H00000000,Shadow=0` : `,BorderStyle=1,OutlineColour=&H80000000,Shadow=1`;
-
-  return `FontSize=${fontSize},FontName=${fontName},PrimaryColour=${assColor},Alignment=${alignment},MarginV=20,Outline=1${backStr}`;
-}
-
 function runFfmpeg(args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
     const proc = spawn(FFMPEG_PATH, args, { stdio: ["ignore", "pipe", "pipe"] });
@@ -135,7 +102,7 @@ function runFfmpeg(args: string[]): Promise<void> {
 export async function burnSubtitlesIntoVideo(
   videoUrl: string,
   segments: CaptionSegment[],
-  style: CaptionStyleConfig
+  style: SubtitleStyle
 ): Promise<Buffer> {
   const id = randomUUID();
   const tmpDir = tmpdir();
@@ -155,8 +122,8 @@ export async function burnSubtitlesIntoVideo(
     await writeFile(inputPath, videoBuffer);
 
     const srtForwardSlash = srtPath.replace(/\\/g, "/").replace(/:/g, "\\:");
-    const forceStyle = buildForceStyle(style);
-    const vf = `subtitles='${srtForwardSlash}':force_style='${forceStyle}'`;
+    const assStyle = subtitleStyleToAss(style);
+    const vf = `subtitles='${srtForwardSlash}':force_style='${assStyle}'`;
 
     await runFfmpeg([
       "-y",

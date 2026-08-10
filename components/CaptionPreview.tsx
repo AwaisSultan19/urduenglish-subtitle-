@@ -1,34 +1,16 @@
 "use client";
 
-import { CaptionSegment, CaptionAnimation } from "@/types";
+import { CaptionSegment, SubtitleStyle } from "@/types";
+import { subtitleStyleToCss } from "@/lib/subtitle-style";
 import { useRef, useEffect, useState, useCallback } from "react";
 
 interface CaptionPreviewProps {
   videoUrl: string;
   segments: CaptionSegment[];
-  style: {
-    fontSize: number;
-    color: string;
-    backgroundColor: string;
-    position: "top" | "center" | "bottom";
-    animation: CaptionAnimation;
-  };
+  style: SubtitleStyle;
   highlightWords?: boolean;
   onUpdateSegments?: (segments: CaptionSegment[]) => void;
 }
-
-const animClassMap: Record<CaptionAnimation, string> = {
-  none: "caption-anim-none",
-  fade: "caption-anim-fade",
-  "slide-up": "caption-anim-slide-up",
-  "slide-down": "caption-anim-slide-down",
-  pop: "caption-anim-pop",
-  typewriter: "caption-anim-typewriter",
-  bounce: "caption-anim-bounce",
-  "glow-pulse": "caption-anim-glow-pulse",
-  "zoom-in": "caption-anim-zoom-in",
-  shake: "caption-anim-shake",
-};
 
 export default function CaptionPreview({
   videoUrl,
@@ -82,7 +64,7 @@ export default function CaptionPreview({
         : "bottom-4";
 
   const activeSegment = activeIdx >= 0 ? segments[activeIdx] : null;
-  const animClass = animClassMap[style.animation] || "caption-anim-none";
+  const animClass = style.animation === "fade" ? "caption-anim-fade" : "caption-anim-none";
 
   const updateSegment = (idx: number, field: keyof CaptionSegment, value: string | number) => {
     if (!onUpdateSegments) return;
@@ -143,8 +125,8 @@ export default function CaptionPreview({
               <span
                 key={wi}
                 style={{
-                  color: isCurrent ? style.color : isPast ? style.color : `${style.color}66`,
-                  textShadow: isCurrent ? `0 0 8px ${style.color}` : "none",
+                  color: isCurrent ? style.activeWordColor : isPast ? style.color : `${style.color}66`,
+                  textShadow: isCurrent && style.activeWordColor !== style.color ? `0 0 8px ${style.activeWordColor}` : "none",
                   transition: "color 0.1s, text-shadow 0.1s",
                 }}
               >
@@ -168,6 +150,8 @@ export default function CaptionPreview({
     );
   };
 
+  const cssStyle = subtitleStyleToCss(style);
+
   return (
     <div className="w-full">
       <label className="block text-sm font-medium text-zinc-300 mb-2">
@@ -189,12 +173,8 @@ export default function CaptionPreview({
               >
                 <span
                   key={`${activeIdx}-${animKey}`}
-                  className={`px-3 py-1.5 rounded-lg text-center max-w-[90%] leading-tight ${animClass}`}
-                  style={{
-                    fontSize: `${style.fontSize}px`,
-                    color: style.color,
-                    backgroundColor: style.backgroundColor,
-                  }}
+                  className={`text-center ${animClass}`}
+                  style={cssStyle}
                 >
                   {renderCaptionWords(activeSegment)}
                 </span>

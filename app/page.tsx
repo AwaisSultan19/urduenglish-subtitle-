@@ -11,25 +11,16 @@ import {
   TargetLanguage,
   SourceLanguage,
   CaptionSegment,
-  CaptionStyleConfig,
+  SubtitleStyle,
   ProjectStatus,
 } from "@/types";
-
-const defaultStyle: CaptionStyleConfig = {
-  preset: "default",
-  fontSize: 18,
-  fontFamily: "Inter",
-  color: "#ffffff",
-  backgroundColor: "rgba(0,0,0,0.7)",
-  position: "bottom",
-  animation: "fade",
-};
+import { SUBTITLE_PRESETS } from "@/lib/subtitle-style";
 
 export default function Home() {
   const [videoUrl, setVideoUrl] = useState("");
   const [language, setLanguage] = useState<TargetLanguage>("english");
   const [sourceLanguage, setSourceLanguage] = useState<SourceLanguage>("urdu");
-  const [style, setStyle] = useState<CaptionStyleConfig>(defaultStyle);
+  const [style, setStyle] = useState<SubtitleStyle>(SUBTITLE_PRESETS.clean);
   const [segments, setSegments] = useState<CaptionSegment[]>([]);
   const [status, setStatus] = useState<ProjectStatus>("idle");
   const [isExporting, setIsExporting] = useState(false);
