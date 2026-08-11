@@ -1,197 +1,69 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import VideoUploader from "@/components/VideoUploader";
-import LanguageSelector from "@/components/LanguageSelector";
-import CaptionPreview from "@/components/CaptionPreview";
-import CaptionStyle from "@/components/CaptionStyle";
-import DownloadButton from "@/components/DownloadButton";
+import FeedbackModal from "@/components/FeedbackModal";
 import { uploadVideoDirect } from "@/lib/upload";
-import {
-  TargetLanguage,
-  SourceLanguage,
-  CaptionSegment,
-  SubtitleStyle,
-  ProjectStatus,
-} from "@/types";
-import { SUBTITLE_PRESETS } from "@/lib/subtitle-style";
+
+const STEPS = [
+  {
+    num: 1,
+    title: "Upload Video",
+    desc: "Drop your Urdu, Hindi, or mixed speech video",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+      </svg>
+    ),
+  },
+  {
+    num: 2,
+    title: "Customize & Generate",
+    desc: "Pick language, font, style & animation",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+      </svg>
+    ),
+  },
+  {
+    num: 3,
+    title: "Export",
+    desc: "Download video with burned-in captions or SRT/VTT",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+      </svg>
+    ),
+  },
+];
 
 export default function Home() {
-  const [videoUrl, setVideoUrl] = useState("");
-  const [language, setLanguage] = useState<TargetLanguage>("english");
-  const [sourceLanguage, setSourceLanguage] = useState<SourceLanguage>("urdu");
-  const [style, setStyle] = useState<SubtitleStyle>(SUBTITLE_PRESETS.clean);
-  const [segments, setSegments] = useState<CaptionSegment[]>([]);
-  const [status, setStatus] = useState<ProjectStatus>("idle");
-  const [isExporting, setIsExporting] = useState(false);
+  const router = useRouter();
+  const [status, setStatus] = useState<"idle" | "uploading" | "error">("idle");
   const [error, setError] = useState("");
-  const [progress, setProgress] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [fileName, setFileName] = useState("");
-  const [highlightWords, setHighlightWords] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const handleUpload = useCallback(async (file: File) => {
     setStatus("uploading");
     setError("");
     setUploadProgress(0);
-    setFileName(file.name);
 
     try {
       const result = await uploadVideoDirect(file, (pct) => {
         setUploadProgress(pct);
       });
-      setVideoUrl(result.videoUrl);
       setUploadProgress(100);
-      setStatus("idle");
+      localStorage.setItem("edit_video_url", result.videoUrl);
+      localStorage.setItem("edit_file_name", file.name);
+      router.push("/edit");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
       setStatus("error");
     }
-  }, []);
-
-  const handleTranslate = useCallback(
-    async (currentSegments: CaptionSegment[]) => {
-      setStatus("translating");
-      setProgress("Translating captions...");
-      try {
-        const res = await fetch("/api/generate-captions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ segments: currentSegments, targetLanguage: language }),
-        });
-        const data = await res.json();
-        if (data.success) {
-          setSegments(data.segments);
-          setStatus("ready");
-          setProgress("");
-        } else {
-          throw new Error(data.error || "Translation failed");
-        }
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Translation failed");
-        setStatus("error");
-        setProgress("");
-      }
-    },
-    [language]
-  );
-
-  const handleTranscribe = useCallback(async () => {
-    if (!videoUrl) return;
-    setStatus("transcribing");
-    setError("");
-    setProgress("Transcribing audio with Whisper... This may take a while.");
-    try {
-      const res = await fetch("/api/transcribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoUrl, fileName, sourceLanguage }),
-      });
-
-      let data;
-      try {
-        data = await res.json();
-      } catch {
-        throw new Error("Server returned invalid response. Check the terminal for details.");
-      }
-
-      if (data.success) {
-        setSegments(data.segments);
-        await handleTranslate(data.segments);
-      } else {
-        throw new Error(data.error || "Transcription failed");
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Transcription failed");
-      setStatus("error");
-      setProgress("");
-    }
-  }, [videoUrl, fileName, sourceLanguage, handleTranslate]);
-
-  const handleExportVideo = useCallback(async () => {
-    if (segments.length === 0) return;
-    setIsExporting(true);
-    setError("");
-    setProgress("Generating video with burned-in captions... This may take a while.");
-    try {
-      const res = await fetch("/api/export", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ segments, videoUrl, style }),
-      });
-
-      if (!res.ok) throw new Error("Export failed");
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "video_with_captions.mp4";
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Export failed");
-    } finally {
-      setIsExporting(false);
-      setProgress("");
-    }
-  }, [segments, videoUrl, style]);
-
-  const handleExportSrt = useCallback(async () => {
-    if (segments.length === 0) return;
-    setIsExporting(true);
-    setError("");
-    try {
-      const res = await fetch("/api/export", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ segments, format: "srt" }),
-      });
-
-      if (!res.ok) throw new Error("Export failed");
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "captions.srt";
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Export failed");
-    } finally {
-      setIsExporting(false);
-    }
-  }, [segments]);
-
-  const handleExportVtt = useCallback(async () => {
-    if (segments.length === 0) return;
-    setIsExporting(true);
-    setError("");
-    try {
-      const res = await fetch("/api/export", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ segments, format: "vtt" }),
-      });
-
-      if (!res.ok) throw new Error("Export failed");
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "captions.vtt";
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Export failed");
-    } finally {
-      setIsExporting(false);
-    }
-  }, [segments]);
-
-  const isProcessing = status === "uploading" || status === "transcribing" || status === "translating";
+  }, [router]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -199,121 +71,112 @@ export default function Home() {
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">UC</span>
+              <span className="text-white font-bold text-sm">ZB</span>
             </div>
-            <span className="font-semibold text-zinc-100">Urdu Caption AI</span>
+            <span className="font-semibold text-zinc-100">Zubaan</span>
           </div>
-          <span className="text-xs text-zinc-500">v0.1.0</span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setFeedbackOpen(true)}
+              className="text-xs text-zinc-500 hover:text-violet-400 border border-zinc-800 hover:border-violet-500/30 px-3 py-1.5 rounded-lg transition-all"
+            >
+              Feedback
+            </button>
+            <span className="text-xs text-zinc-500">v0.1.0</span>
+          </div>
         </div>
       </header>
 
       <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-10">
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold text-zinc-100 mb-2">
-            AI-Powered Urdu Video Captions
+        {/* Hero */}
+        <div className="text-center mb-10">
+          <h1 className="text-3xl md:text-4xl font-bold text-zinc-100 mb-3">
+            Your Speech. Your Language. Your Captions.
           </h1>
-          <p className="text-zinc-400 text-sm">
-            Upload an Urdu video, choose your target language, and generate captions in seconds.
+          <p className="text-zinc-400 text-sm max-w-xl mx-auto">
+            Turn Hindi, Urdu, and English mixed speech into clean{" "}
+            <strong className="text-zinc-300">Roman Urdu or English captions</strong> in seconds.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="space-y-6">
-            <VideoUploader onUpload={handleUpload} isUploading={status === "uploading"} uploadProgress={uploadProgress} />
-
-            <LanguageSelector
-              value={language}
-              onChange={setLanguage}
-              sourceLanguage={sourceLanguage}
-              onSourceLanguageChange={setSourceLanguage}
-              disabled={isProcessing || isExporting}
-            />
-
-            <CaptionStyle value={style} onChange={setStyle} disabled={isProcessing || isExporting} />
-
-            {segments.length > 0 && (
-              <div className="flex items-center gap-2">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={highlightWords}
-                    onChange={(e) => setHighlightWords(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-violet-600"></div>
-                </label>
-                <span className="text-xs text-zinc-400">Word Highlight (Karaoke)</span>
-              </div>
-            )}
-
-            {videoUrl && segments.length === 0 && (
-              <button
-                onClick={handleTranscribe}
-                disabled={isProcessing}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-all"
+        {/* Step Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+          {STEPS.map((step) => {
+            const isActive = step.num === 1;
+            const isDone = false;
+            return (
+              <div
+                key={step.num}
+                className={`relative rounded-2xl border p-5 transition-all duration-300 ${
+                  isActive
+                    ? "border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/5"
+                    : isDone
+                      ? "border-emerald-500/30 bg-emerald-500/5"
+                      : "border-zinc-800 bg-zinc-900/30"
+                }`}
               >
-                {status === "transcribing" || status === "translating" ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    {status === "transcribing" ? "Transcribing..." : "Translating..."}
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
-                    </svg>
-                    Generate Captions
-                  </>
+                <div className="flex items-start gap-4">
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all ${
+                      isActive
+                        ? "bg-violet-600 text-white"
+                        : isDone
+                          ? "bg-emerald-600/20 text-emerald-400"
+                          : "bg-zinc-800 text-zinc-500"
+                    }`}
+                  >
+                    {isDone ? (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      step.icon
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${isActive ? "text-violet-400" : isDone ? "text-emerald-400" : "text-zinc-600"}`}>
+                        Step {step.num}
+                      </span>
+                      {isActive && (
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
+                        </span>
+                      )}
+                    </div>
+                    <h3 className={`text-sm font-semibold ${isActive ? "text-zinc-100" : isDone ? "text-zinc-300" : "text-zinc-400"}`}>
+                      {step.title}
+                    </h3>
+                    <p className="text-xs text-zinc-500 mt-0.5">{step.desc}</p>
+                  </div>
+                </div>
+                {step.num < STEPS.length && (
+                  <div className="hidden md:block absolute top-1/2 -right-3 w-3 h-px bg-zinc-700 -translate-y-1/2" />
                 )}
-              </button>
-            )}
-
-            {progress && (
-              <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-300 text-sm flex items-center gap-2">
-                <svg className="animate-spin h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                {progress}
               </div>
-            )}
-
-            {error && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                {error}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-6">
-            <CaptionPreview
-              videoUrl={videoUrl}
-              segments={segments}
-              style={style}
-              highlightWords={highlightWords}
-              onUpdateSegments={setSegments}
-            />
-
-            {status === "ready" && (
-              <DownloadButton
-                onDownloadVideo={handleExportVideo}
-                onDownloadSrt={handleExportSrt}
-                onDownloadVtt={handleExportVtt}
-                isExporting={isExporting}
-              />
-            )}
-          </div>
+            );
+          })}
         </div>
+
+        {/* Upload */}
+        <VideoUploader onUpload={handleUpload} isUploading={status === "uploading"} uploadProgress={uploadProgress} />
+
+        {/* Error */}
+        {error && (
+          <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+            {error}
+          </div>
+        )}
       </main>
 
       <footer className="border-t border-zinc-800 py-4">
         <div className="max-w-5xl mx-auto px-6 text-center text-xs text-zinc-600">
-          Urdu Caption AI &mdash; AI-powered video captioning
+          Zubaan &mdash; AI-powered video captioning
         </div>
       </footer>
+
+      <FeedbackModal isOpen={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </div>
   );
 }
