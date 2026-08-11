@@ -217,9 +217,9 @@ export default function EditPage() {
             <div className="w-px h-5 bg-zinc-800" />
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-violet-600 flex items-center justify-center">
-                <span className="text-white font-bold text-xs">ZB</span>
+                <span className="text-white font-bold text-xs">SL</span>
               </div>
-              <span className="font-semibold text-zinc-100 text-sm">Zubaan</span>
+              <span className="font-semibold text-zinc-100 text-sm">Subly</span>
             </div>
           </div>
           <div className="flex items-center gap-3">

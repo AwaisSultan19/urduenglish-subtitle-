@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "Zubaan <onboarding@resend.dev>",
+            from: "Subly <onboarding@resend.dev>",
             to: NOTIFICATION_EMAIL,
             subject: `New Feedback: ${ratingLabel}`,
             html: htmlContent,

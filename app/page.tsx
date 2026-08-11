@@ -71,9 +71,9 @@ export default function Home() {
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">ZB</span>
+              <span className="text-white font-bold text-sm">SL</span>
             </div>
-            <span className="font-semibold text-zinc-100">Zubaan</span>
+            <span className="font-semibold text-zinc-100">Subly</span>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -172,7 +172,7 @@ export default function Home() {
 
       <footer className="border-t border-zinc-800 py-4">
         <div className="max-w-5xl mx-auto px-6 text-center text-xs text-zinc-600">
-          Zubaan &mdash; AI-powered video captioning
+          Subly &mdash; AI-powered video captioning
         </div>
       </footer>
 

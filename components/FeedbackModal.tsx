@@ -97,7 +97,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
         ) : (
           <div className="p-6">
             <h3 className="text-lg font-semibold text-zinc-100 mb-1">Send Feedback</h3>
-            <p className="text-sm text-zinc-500 mb-5">Help us improve Zubaan.</p>
+            <p className="text-sm text-zinc-500 mb-5">Help us improve Subly.</p>
 
             <div className="space-y-5">
               <div>

@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Zubaan",
+  title: "Subly",
   description: "Generate captions for Urdu videos with AI-powered transcription and translation",
 };
 

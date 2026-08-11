@@ -26,6 +26,7 @@ export default function VideoUploader({ onUpload, isUploading, uploadProgress }:
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
+      e.stopPropagation();
       setDragActive(false);
       const file = e.dataTransfer.files[0];
       if (file) handleFile(file);
@@ -41,16 +42,31 @@ export default function VideoUploader({ onUpload, isUploading, uploadProgress }:
     [handleFile]
   );
 
+  const handleClick = () => {
+    if (!isUploading && inputRef.current) {
+      inputRef.current.click();
+    }
+  };
+
   return (
     <div className="w-full">
-      <label
+      <div
         onDragOver={(e) => {
           e.preventDefault();
+          e.stopPropagation();
           setDragActive(true);
         }}
-        onDragLeave={() => setDragActive(false)}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragActive(false);
+        }}
         onDrop={onDrop}
-        onClick={() => !isUploading && inputRef.current?.click()}
+        onClick={handleClick}
+        onTouchEnd={(e) => {
+          e.preventDefault();
+          handleClick();
+        }}
         className={`flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-2xl cursor-pointer transition-all duration-200 ${
           dragActive
             ? "border-violet-500 bg-violet-500/10"
@@ -60,10 +76,11 @@ export default function VideoUploader({ onUpload, isUploading, uploadProgress }:
         <input
           ref={inputRef}
           type="file"
-          accept="video/*"
+          accept="video/mp4,video/webm,video/quicktime,video/*"
           onChange={onChange}
-          className="hidden"
+          className="sr-only"
           disabled={isUploading}
+          aria-label="Upload video"
         />
         {isUploading ? (
           <div className="flex flex-col items-center gap-3 w-3/4">
@@ -110,7 +127,7 @@ export default function VideoUploader({ onUpload, isUploading, uploadProgress }:
             </span>
           </div>
         )}
-      </label>
+      </div>
     </div>
   );
 }
