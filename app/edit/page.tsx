@@ -202,8 +202,8 @@ export default function EditPage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-full mx-auto px-6 py-3 flex items-center justify-between">
+      <header className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-10 shrink-0">
+        <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push("/")}
@@ -233,11 +233,11 @@ export default function EditPage() {
         </div>
       </header>
 
-      {/* Split Layout */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left - Video Preview */}
-        <div className="flex-1 flex flex-col min-w-0 p-4">
-          <div className="flex-1 flex items-center justify-center">
+      {/* Layout */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Video Preview */}
+        <div className="flex-1 flex flex-col min-w-0 p-4 lg:p-6">
+          <div className="flex-1 flex items-start lg:items-center justify-center overflow-auto">
             <div className="w-full max-w-3xl">
               <CaptionPreview
                 videoUrl={videoUrl}
@@ -250,9 +250,9 @@ export default function EditPage() {
           </div>
         </div>
 
-        {/* Right - Controls Panel */}
-        <div className="w-[380px] shrink-0 border-l border-zinc-800 bg-zinc-900/30 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        {/* Controls Panel */}
+        <div className="w-full lg:w-[380px] shrink-0 border-t lg:border-t-0 lg:border-l border-zinc-800 bg-zinc-900/50 flex flex-col overflow-hidden max-h-[50vh] lg:max-h-none">
+          <div className="flex-1 overflow-y-auto p-4 lg:p-5 space-y-4 lg:space-y-5">
             {/* Language */}
             <div>
               <label className="block text-sm font-medium text-zinc-300 mb-2">
