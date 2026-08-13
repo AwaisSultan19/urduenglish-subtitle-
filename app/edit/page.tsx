@@ -115,7 +115,14 @@ export default function EditPage() {
         body: JSON.stringify({ segments, videoUrl, style }),
       });
 
-      if (!res.ok) throw new Error("Export failed");
+      if (!res.ok) {
+        let errMsg = "Export failed";
+        try {
+          const errData = await res.json();
+          errMsg = errData.error || errMsg;
+        } catch {}
+        throw new Error(errMsg);
+      }
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

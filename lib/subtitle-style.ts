@@ -181,17 +181,28 @@ export function subtitleStyleToAss(style: SubtitleStyle): string {
     return `&H00${b.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${r.toString(16).padStart(2, "0")}`.toUpperCase();
   };
 
-  const rgbaToAss = (rgba: string): string => {
-    const m = rgba.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
-    if (!m) return "&H00000000";
-    const r = parseInt(m[1]);
-    const g = parseInt(m[2]);
-    const b = parseInt(m[3]);
-    const a = Math.round((1 - parseFloat(m[4])) * 255);
-    return `&${a.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${r.toString(16).padStart(2, "0")}`.toUpperCase();
+  const parseColor = (color: string, opacity: number): string => {
+    if (color === "transparent") return "&H00FFFFFF";
+    if (color.startsWith("rgba")) {
+      const m = color.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
+      if (!m) return "&H00000000";
+      const r = parseInt(m[1]);
+      const g = parseInt(m[2]);
+      const b = parseInt(m[3]);
+      const a = Math.round((1 - parseFloat(m[4])) * 255);
+      return `&${a.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${r.toString(16).padStart(2, "0")}`.toUpperCase();
+    }
+    if (color.startsWith("#")) {
+      const r = parseInt(color.slice(1, 3), 16);
+      const g = parseInt(color.slice(3, 5), 16);
+      const b = parseInt(color.slice(5, 7), 16);
+      const a = Math.round((1 - opacity) * 255);
+      return `&${a.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${r.toString(16).padStart(2, "0")}`.toUpperCase();
+    }
+    return "&H00000000";
   };
 
-  const posMap: Record<string, string> = { top: "6", center: "5", bottom: "2" };
+  const posMap: Record<string, string> = { top: "8", center: "5", bottom: "2" };
   const alignment = posMap[style.position] || "2";
 
   const assFontSize = Math.round(style.fontSize * (style.fontWeight >= 700 ? 1.0 : 0.95));
@@ -203,7 +214,7 @@ export function subtitleStyleToAss(style: SubtitleStyle): string {
   const borderStyle = hasBg ? "3" : "1";
 
   const outlineCol = hasBg ? "&H00000000" : hexToAss(style.outlineColor === "transparent" ? "#000000" : style.outlineColor);
-  const backCol = hasBg ? rgbaToAss(style.backgroundColor === "transparent" ? "rgba(0,0,0,0.65)" : style.backgroundColor) : "&H80000000";
+  const backCol = hasBg ? parseColor(style.backgroundColor, style.backgroundOpacity) : "&H80000000";
 
   return [
     `FontSize=${assFontSize}`,

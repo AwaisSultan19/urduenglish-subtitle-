@@ -123,7 +123,7 @@ export async function burnSubtitlesIntoVideo(
 
     const srtForwardSlash = srtPath.replace(/\\/g, "/").replace(/:/g, "\\:");
     const assStyle = subtitleStyleToAss(style);
-    const vf = `subtitles='${srtForwardSlash}':force_style='${assStyle}'`;
+    const vf = `subtitles='${srtForwardSlash}':force_style="${assStyle}"`;
 
     await runFfmpeg([
       "-y",
