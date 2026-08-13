@@ -20,10 +20,117 @@ export default function CaptionPreview({
   onUpdateSegments,
 }: CaptionPreviewProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [activeIdx, setActiveIdx] = useState(-1);
   const [animKey, setAnimKey] = useState(0);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+
+  // Video control functions
+  const togglePlay = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      video.play();
+      setIsPlaying(true);
+    } else {
+      video.pause();
+      setIsPlaying(false);
+    }
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    try {
+      if (!document.fullscreenElement) {
+        await container.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch (err) {
+      console.error("Fullscreen error:", err);
+    }
+  }, []);
+
+  const seek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const video = videoRef.current;
+    if (!video) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pos = (e.clientX - rect.left) / rect.width;
+    video.currentTime = pos * video.duration;
+  }, []);
+
+  const formatTimeDisplay = useCallback((time: number) => {
+    const m = Math.floor(time / 60);
+    const s = Math.floor(time % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }, []);
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  // Auto-hide controls when playing
+  useEffect(() => {
+    if (!isPlaying) {
+      setShowControls(true);
+      return;
+    }
+
+    let timeout: NodeJS.Timeout;
+    const handleMouseMove = () => {
+      setShowControls(true);
+      clearTimeout(timeout);
+      timeout = setTimeout(() => setShowControls(false), 3000);
+    };
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener("mousemove", handleMouseMove);
+      container.addEventListener("touchstart", handleMouseMove);
+      timeout = setTimeout(() => setShowControls(false), 3000);
+    }
+
+    return () => {
+      clearTimeout(timeout);
+      if (container) {
+        container.removeEventListener("mousemove", handleMouseMove);
+        container.removeEventListener("touchstart", handleMouseMove);
+      }
+    };
+  }, [isPlaying]);
+
+  // Track video state
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleEnded = () => setIsPlaying(false);
+
+    video.addEventListener("play", handlePlay);
+    video.addEventListener("pause", handlePause);
+    video.addEventListener("ended", handleEnded);
+
+    return () => {
+      video.removeEventListener("play", handlePlay);
+      video.removeEventListener("pause", handlePause);
+      video.removeEventListener("ended", handleEnded);
+    };
+  }, []);
 
   const findActiveSegment = useCallback(
     (time: number) => {
@@ -152,20 +259,34 @@ export default function CaptionPreview({
 
   const cssStyle = subtitleStyleToCss(style);
 
+  const progress = videoRef.current ? (currentTime / (videoRef.current.duration || 1)) * 100 : 0;
+
   return (
     <div className="w-full">
       <label className="block text-sm font-medium text-zinc-300 mb-2">
         Preview
       </label>
-      <div className="relative w-full aspect-video bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800">
+      <div 
+        ref={containerRef}
+        className={`video-preview-container relative w-full bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800 ${
+          isFullscreen ? "h-screen" : "aspect-video"
+        }`}
+        onMouseEnter={() => setShowControls(true)}
+        onMouseLeave={() => !isPlaying && setShowControls(true)}
+      >
         {videoUrl ? (
           <>
             <video
               ref={videoRef}
               src={videoUrl}
               className="w-full h-full object-contain"
-              controls
-              muted
+              onClick={togglePlay}
+              playsInline
+              webkit-playsinline="true"
+              x5-playsinline="true"
+              x5-video-player-type="h5"
+              x5-video-player-fullscreen="false"
+              x5-video-orientation="portraint"
             />
             {activeSegment && (
               <div
@@ -180,6 +301,70 @@ export default function CaptionPreview({
                 </span>
               </div>
             )}
+
+            {/* Custom Video Controls */}
+            <div 
+              className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 transition-opacity duration-300 ${
+                showControls || !isPlaying ? "opacity-100" : "opacity-0"
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Progress Bar */}
+              <div 
+                className="w-full h-1 bg-zinc-700 rounded-full mb-2 cursor-pointer group"
+                onClick={seek}
+              >
+                <div 
+                  className="h-full bg-violet-500 rounded-full relative"
+                  style={{ width: `${progress}%` }}
+                >
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-violet-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </div>
+
+              {/* Control Buttons */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {/* Play/Pause */}
+                  <button
+                    onClick={togglePlay}
+                    className="w-8 h-8 flex items-center justify-center text-white hover:text-violet-400 transition-colors"
+                  >
+                    {isPlaying ? (
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    )}
+                  </button>
+
+                  {/* Time Display */}
+                  <span className="text-xs text-zinc-300 font-mono">
+                    {formatTimeDisplay(currentTime)} / {formatTimeDisplay(videoRef.current?.duration || 0)}
+                  </span>
+                </div>
+
+                {/* Fullscreen Button */}
+                <button
+                  onClick={toggleFullscreen}
+                  className="w-8 h-8 flex items-center justify-center text-white hover:text-violet-400 transition-colors"
+                  title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                >
+                  {isFullscreen ? (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
           </>
         ) : (
           <div className="flex items-center justify-center h-full text-zinc-600">

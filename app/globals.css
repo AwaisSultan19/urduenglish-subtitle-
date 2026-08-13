@@ -148,3 +148,18 @@ body {
   animation: caption-typewriter 0.8s steps(30, end) forwards,
              caption-blink-caret 0.75s step-end infinite;
 }
+
+/* Prevent video fullscreen on mobile */
+video {
+  object-fit: contain;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Mobile video container - keep it small */
+@media (max-width: 1023px) {
+  .video-preview-container {
+    max-height: 35vh;
+    aspect-ratio: 16/9;
+  }
+}

@@ -235,10 +235,11 @@ export default function EditPage() {
 
       {/* Layout */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Video Preview */}
-        <div className="flex-1 flex flex-col min-w-0 p-4 lg:p-6">
-          <div className="flex-1 flex items-start lg:items-center justify-center overflow-auto">
-            <div className="w-full max-w-3xl">
+        {/* Mobile: Compact layout with video and quick style access */}
+        <div className="flex-1 flex flex-col min-w-0 p-4 lg:p-6 overflow-y-auto lg:overflow-hidden">
+          {/* Video Preview - constrained on mobile */}
+          <div className="w-full max-w-3xl mx-auto lg:mx-0 lg:flex-1 lg:flex lg:items-center lg:justify-center">
+            <div className="w-full">
               <CaptionPreview
                 videoUrl={videoUrl}
                 segments={segments}
@@ -250,8 +251,8 @@ export default function EditPage() {
           </div>
         </div>
 
-        {/* Controls Panel */}
-        <div className="w-full lg:w-[380px] shrink-0 border-t lg:border-t-0 lg:border-l border-zinc-800 bg-zinc-900/50 flex flex-col overflow-hidden max-h-[50vh] lg:max-h-none">
+        {/* Controls Panel - scrollable on mobile, fixed on desktop */}
+        <div className="w-full lg:w-[380px] shrink-0 border-t lg:border-t-0 lg:border-l border-zinc-800 bg-zinc-900/50 flex flex-col overflow-y-auto lg:overflow-hidden max-h-[45vh] lg:max-h-none">
           <div className="flex-1 overflow-y-auto p-4 lg:p-5 space-y-4 lg:space-y-5">
             {/* Language */}
             <div>
